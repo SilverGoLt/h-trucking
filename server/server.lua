@@ -12,10 +12,6 @@ RegisterCommand('getpos', function(source)
     print(pos.x..', '..pos.y..', '..pos.z..', '..h)
 end, false)
 
-RegisterCommand('getPay', function(source)
-    TriggerEvent('trucker:getPay')
-end, false)
-
 RegisterNetEvent('trucker:setDelivery')
 AddEventHandler('trucker:setDelivery', function(num)
     delivery = num
