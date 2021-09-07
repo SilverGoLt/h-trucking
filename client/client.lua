@@ -38,6 +38,40 @@ CreateThread(function()
     end
 end)
 
+
+--Check NPC Delivery
+CreateThread(function()
+    while true do
+        local w = 500
+        local pos = GetEntityCoords(PlayerPedId())
+        local npc = vector3(Config.NPC.x , Config.NPC.y, Config.NPC.z)
+        local dist = #(npc - pos)
+        if dist < 2 and not haveDelivery then
+            DrawText3D(npc, '~INPUT_PICKUP~ Get a delivery!')
+            w = 10
+        else
+            w = 500
+        end
+        Wait(w)
+    end
+end)
+
+--NPC Thread :)
+Citizen.CreateThread(function() 
+	RequestModel("s_m_y_dealer_01")
+    while not HasModelLoaded("s_m_y_dealer_01") do
+      Wait(10)
+    end
+    localNpc = CreatePed(26, "s_m_y_dealer_01",Config.NPC.x , Config.NPC.y,Config.NPC.z  - 1, Config.NPC.h, false, false)
+    TaskStartScenarioInPlace(localNpc, "WORLD_HUMAN_DRUG_DEALER_HARD", 0, false)
+    FreezeEntityPosition(localNpc, true)
+    SetEntityInvincible(localNpc, true)
+	GiveWeaponToPed(localNpc, 1834241177, 9999,  false, true);
+    SetPedCanRagdollFromPlayerImpact(localNpc, false)
+    SetPedCanRagdoll(localNpc, false)
+    SetBlockingOfNonTemporaryEvents(localNpc, true)
+end)
+
 -- Check trailer to give delivery point
 CreateThread(function()
     while not hasTrailer do
@@ -54,6 +88,24 @@ CreateThread(function()
         end
     end
 end)
+
+--Return vehicle thread
+CreateThread(function()
+    while true do
+        local w = 500
+        local pos = GetEntityCoords(PlayerPedId())
+        local ret = vector3(Config.Return.x , Config.Return.y, Config.Return.z)
+        local dist = #(ret - pos)
+        if dist < 3 and haveVeh then
+            DrawText3D(ret, '~INPUT_PICKUP~ Return truck!')
+            w = 10
+        else
+            w = 500
+        end
+        Wait(w)
+    end
+end)
+
 -- Check if player is at delivery point with trailer!
 function checkDelivery()
     Citizen.CreateThread(function()
@@ -75,29 +127,62 @@ end
 RegisterCommand('deliver_trailer', function() deliverTrailer() end, false)
 RegisterKeyMapping('deliver_trailer', 'Deliver Trailer', 'keyboard', 'e')
 
+RegisterCommand('return_truck', function() returnTruck() end, false)
+RegisterKeyMapping('return_truck', 'return truck', 'keyboard', 'e')
+
+RegisterCommand('get_delivery', function() getDelivery() end, false)
+RegisterKeyMapping('get_delivery', 'Receive a delivery', 'keyboard', 'e')
+
 RegisterCommand('trucker_car', function() spawnTruck() end, false)
 RegisterKeyMapping('trucker_car', 'Spawns Trucker vehicle', 'keyboard', 'e')
 
+
+--Return truck
+function returnTruck()
+    local ped = GetPlayerPed(-1)
+    local pos = GetEntityCoords(PlayerPedId())
+    local ret = vector3(Config.Return.x , Config.Return.y, Config.Return.z)
+    local dist = #(ret - pos)
+    if dist < 3 and haveVeh then
+        if IsPedInAnyVehicle(ped) then
+            ESX.Game.DeleteVehicle(currentVeh)
+            haveVeh = false
+        end
+    end
+end
+
+--Receive delivery
+function getDelivery()
+    local pos = GetEntityCoords(PlayerPedId())
+    local npc = vector3(Config.NPC.x , Config.NPC.y, Config.NPC.z)
+    local dist = #(npc - pos)
+    if dist < 3 and not haveDelivery then
+        haveDelivery = true
+        ESX.ShowNotification('You have received the information for your delivery!', true, false)
+        randPick()
+        Wait(100)
+        pickGps()
+        trailer()
+    end
+end
 --Spawn Truck
 function spawnTruck()
     local pos = GetEntityCoords(PlayerPedId())
     local dist = #(veh - pos)
     if dist < 3 then
-        if not haveVeh and not haveDelivery then
+        if not haveVeh and haveDelivery then
             if ESX.Game.IsSpawnPointClear(vehspw, 5.0) then
                 ESX.Game.SpawnVehicle('phantom3', vehspw, 300.0, function(vehicle)
                     currentVeh = vehicle
                 end)
-                ESX.ShowNotification('You have received your car and coordinates', true, false)
+                ESX.ShowNotification('You have received your truck', true, false)
                 haveVeh = true
-                randPick()
-                Wait(100)
-                pickGps()
-                trailer()
             elseif not haveVeh then
                 ESX.ShowNotification("There's a truck over there already!", true, false)
             end
-        end    
+        else
+            ESX.ShowNotification("Currently you don't have a delivery :/", true, false)
+        end  
     end
 end
 
@@ -154,6 +239,20 @@ function deliverGps()
     end
 end
 
+function returnBlip()
+    local returnBlip
+    returnBlip = AddBlipForCoord(Config.Return.x,Config.Return.y,Config.Return.z)
+    SetBlipHighDetail(returnBlip, true)
+    SetBlipSprite (returnBlip, 524)
+    SetBlipDisplay(returnBlip, 4)
+    SetBlipScale  (returnBlip, 0.6)
+    SetBlipColour (returnBlip, 67)
+    SetBlipAsShortRange(returnBlip, true)
+    BeginTextCommandSetBlipName('STRING')
+    AddTextComponentSubstringPlayerName('Truck Return')
+    EndTextCommandSetBlipName(returnBlip)
+end
+
 function removeBlip()
     RemoveBlip(blip)
 end
@@ -163,7 +262,7 @@ function trailer()
         if k == currentID then
             if ESX.Game.IsSpawnPointClear(pickPos, 5.0) then
                 ESX.Game.SpawnVehicle(v.trailer, pickPos, v.coords.h, function(vehicle)
-                trailer = vehicle
+                    trailer = vehicle
                 end)
             end
         end
@@ -180,10 +279,13 @@ function deliverTrailer()
             TriggerServerEvent('trucker:getPay')
             removeBlip()
             delivered = true
+            hasTrailer = false
+            trailer = 0
+            haveDelivery = false
         end
     end
 end
-function createBlip()
+function createMainBlip()
     local mainBlip
     mainBlip = AddBlipForCoord(Config.Cords['veh'].x,Config.Cords['veh'].y,Config.Cords['veh'].z)
     SetBlipHighDetail(mainBlip, true)
@@ -194,6 +296,20 @@ function createBlip()
     SetBlipAsShortRange(mainBlip, true)
     BeginTextCommandSetBlipName('STRING')
     AddTextComponentSubstringPlayerName('Trucker Garage')
+    EndTextCommandSetBlipName(mainBlip)
+end
+
+function npcBlip()
+    local mainBlip
+    mainBlip = AddBlipForCoord(Config.NPC.x,Config.NPC.y,Config.NPC.z)
+    SetBlipHighDetail(mainBlip, true)
+    SetBlipSprite (mainBlip, 133)
+    SetBlipDisplay(mainBlip, 4)
+    SetBlipScale  (mainBlip, 0.7)
+    SetBlipColour (mainBlip, 26)
+    SetBlipAsShortRange(mainBlip, true)
+    BeginTextCommandSetBlipName('STRING')
+    AddTextComponentSubstringPlayerName('Delivery HQ')
     EndTextCommandSetBlipName(mainBlip)
 end
 -- Text
@@ -226,6 +342,8 @@ AddEventHandler('onResourceStart', function(resourceName)
     if (GetCurrentResourceName() ~= resourceName) then
       return
     else
-        createBlip()
+        createMainBlip()
+        npcBlip()
+        returnBlip()
     end
 end)
