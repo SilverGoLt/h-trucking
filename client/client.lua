@@ -74,18 +74,20 @@ end)
 
 -- Check trailer to give delivery point
 CreateThread(function()
-    while not hasTrailer do
-        Wait(300)
-        if trailer == trailer then
-            if IsVehicleAttachedToTrailer(currentVeh) == 1 then
-                deliverGps()
-                hasTrailer = true
-                TriggerServerEvent('trucker:setDelivery', currentID)
-                ESX.ShowNotification('You have taken the trailer, deliver it safely!', true, false)
-                Wait(100)
-                checkDelivery()
+    while true do
+        if not hasTrailer then
+            if trailer == trailer then
+                if IsVehicleAttachedToTrailer(currentVeh) == 1 then
+                    deliverGps()
+                    hasTrailer = true
+                    TriggerServerEvent('trucker:setDelivery', currentID)
+                    ESX.ShowNotification('You have taken the trailer, deliver it safely!', true, false)
+                    Wait(100)
+                    checkDelivery()
+                end
             end
         end
+        Wait(1000)
     end
 end)
 
@@ -160,9 +162,8 @@ function getDelivery()
         haveDelivery = true
         ESX.ShowNotification('You have received the information for your delivery!', true, false)
         randPick()
-        Wait(100)
         pickGps()
-        trailer()
+        getTrailer()
     end
 end
 --Spawn Truck
@@ -219,11 +220,13 @@ end
 -- Delivery GPS
 function deliverGps()
     RemoveBlip(blip)
+    print('Executina')
     Wait(10)
     for k,v in pairs(Config.Delivery) do
         if k == currentID then
             pay = v.pay
             deliverPos = vector3(v.coords.x, v.coords.y, v.coords.z)
+            print(deliverPos)
             blip = AddBlipForCoord(v.coords.x, v.coords.y, v.coords.z)
             SetBlipHighDetail(blip, true)
             SetBlipSprite (blip, 8)
@@ -257,12 +260,15 @@ function removeBlip()
     RemoveBlip(blip)
 end
 -- Trailer Spawn
-function trailer()
+function getTrailer()
     for k,v in pairs(Config.Pickup) do
+        print(currentID)
         if k == currentID then
+            print('bandau spawnint')
             if ESX.Game.IsSpawnPointClear(pickPos, 5.0) then
                 ESX.Game.SpawnVehicle(v.trailer, pickPos, v.coords.h, function(vehicle)
                     trailer = vehicle
+                    print(trailer)
                 end)
             end
         end
@@ -270,7 +276,7 @@ function trailer()
 end
 --Deliver trailer
 function deliverTrailer()
-    if hasTrailer and inZone then
+    if hasTrailer and inZone and IsVehicleAttachedToTrailer(currentVeh) == 1 then
         local pos = GetEntityCoords(PlayerPedId())
         local dist = #(deliverPos - pos)
         if dist < 3 and inZone then
@@ -278,11 +284,17 @@ function deliverTrailer()
             ESX.ShowNotification("You have delivered the product and received $"..pay, true, false)
             TriggerServerEvent('trucker:getPay')
             removeBlip()
-            delivered = true
+            delivered = false
             hasTrailer = false
             trailer = 0
+            inZone = false
+            currentID = 0
+            pickPos = 0
+            deliverPos = 0
             haveDelivery = false
         end
+    else
+        ESX.ShowNotification("I think you lost your trailer on the way?", true, false)
     end
 end
 function createMainBlip()
