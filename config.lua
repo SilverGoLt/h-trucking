@@ -1,4 +1,13 @@
 Config = {}
+
+-- You can add multiple trucks in this table and a random truck will be picked out for the player!
+Config.Trucks = {
+    'phantom3',
+    'packer',
+    'phantom',
+    'pounder'
+}
+
 Config.Cords = {
     ['veh'] = { 
         x = 2893.2395019531,

@@ -173,7 +173,11 @@ function spawnTruck()
     if dist < 3 then
         if not haveVeh and haveDelivery then
             if ESX.Game.IsSpawnPointClear(vehspw, 5.0) then
-                ESX.Game.SpawnVehicle('phantom3', vehspw, 300.0, function(vehicle)
+                -- Not tested so not sure if it works :shrug:
+                local r = math.random(1, #Config.Vehicles)
+                local truck = Config.Vehicles[r]
+
+                ESX.Game.SpawnVehicle(truck, vehspw, 300.0, function(vehicle)
                     currentVeh = vehicle
                 end)
                 ESX.ShowNotification('You have received your truck', true, false)
@@ -262,9 +266,7 @@ end
 -- Trailer Spawn
 function getTrailer()
     for k,v in pairs(Config.Pickup) do
-        print(currentID)
         if k == currentID then
-            print('bandau spawnint')
             if ESX.Game.IsSpawnPointClear(pickPos, 5.0) then
                 ESX.Game.SpawnVehicle(v.trailer, pickPos, v.coords.h, function(vehicle)
                     trailer = vehicle
