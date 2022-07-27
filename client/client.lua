@@ -174,8 +174,8 @@ function spawnTruck()
         if not haveVeh and haveDelivery then
             if ESX.Game.IsSpawnPointClear(vehspw, 5.0) then
                 -- Not tested so not sure if it works :shrug:
-                local r = math.random(1, #Config.Vehicles)
-                local truck = Config.Vehicles[r]
+                local r = math.random(1, #Config.Trucks)
+                local truck = Config.Trucks[r]
 
                 ESX.Game.SpawnVehicle(truck, vehspw, 300.0, function(vehicle)
                     currentVeh = vehicle
